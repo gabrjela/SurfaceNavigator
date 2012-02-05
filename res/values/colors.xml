@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="background">#3500ffff</color>
+    <color name="grid_background">#ff9cb0b5</color>
+    <color name="grid_hilite">#ffffffff</color>
+    <color name="grid_light">#64c6d4ef</color>
+    <color name="grid_dark">#6456688f</color>
+    <color name="grid_foreground">#ff000000</color>
+    <color name="grid_selected">#350099ff</color>
+    <color name="grid_winner">#990044aa</color>
+    
+</resources>

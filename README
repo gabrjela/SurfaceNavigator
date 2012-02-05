@@ -1,0 +1,9 @@
+target=android-12
+minSdkVersion=8
+The project is set up to be built by Eclipse.
+
+Short description:
+SurfaceNavigator is a demo for how to create a surface larger than the screen of the device, and also how to implement drag gestures over this surface.
+Zoom in/out feature will be implemented as well.
+
+Surface has been drawn as a grid of 30x30 cells, on which you can place cross marks - current example is the start point for a Tic tac toe game.
