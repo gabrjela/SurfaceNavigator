@@ -5,15 +5,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import my.pack.utils.MyPoint;
-
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Paint.FontMetrics;
+import android.graphics.Paint.Style;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
-import android.graphics.Paint.FontMetrics;
-import android.graphics.Paint.Style;
+import android.graphics.Region;
+import android.graphics.RegionIterator;
 import android.util.FloatMath;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -28,7 +30,6 @@ public class MySurface extends View {
 	private Paint background = null;
 	private Paint dark = null;
 	private Paint hilite = null;
-	private Paint light = null;
 	private Paint foreground = null;
 	private FontMetrics fm = null;
 	private Paint selected = null;
@@ -45,6 +46,7 @@ public class MySurface extends View {
 	private int cellHeight = 0;
 	// Define area to be drawn when user clicks on a cell
 	private final Rect selRect = new Rect();
+	private int borderSize;
 	
 	// Remember some things for dragging/zooming
 	// start of drag operation
@@ -57,12 +59,11 @@ public class MySurface extends View {
 	// coords of previous drag point 
 	private float oldX = 0;
 	private float oldY = 0;
-	// coords of total distance between start point and current drag point
-	private float deltaX = 0;
-	private float deltaY = 0;
-	// coords of total distance dragged since the beginning of the app
-	private float deltaXs = 0;
-	private float deltaYs = 0;
+	private float transX;
+	private float transY;
+	private Matrix matrix = new Matrix();
+	// Matrix values used for retrieving MTRANS_X and MTRANS_Y
+	private float[] values = new float[9];
     
 	// Arrays of marked points on screen (drawn as X symbol)
 	private ArrayList<MyPoint> myMarks = null;
@@ -78,8 +79,12 @@ public class MySurface extends View {
     private static float SPACE_LEFT;
     private static float SPACE_RIGHT;
     
+    private float initTransX;
+    private float initTransY;
+    
     // Depending on this value we'll have a thiner or thicker line separator 
     public static float BIG_CELL_SIZE = 48;
+    public static final int BORDER_FRACTION = 10;
     
     
 	public MySurface(Context context, int width, int height) {
@@ -94,6 +99,7 @@ public class MySurface extends View {
 		cellWidth = w / SurfaceNavigator.CELL_COUNT;
 		cellHeight = h / SurfaceNavigator.CELL_COUNT;
 		if (D) Log.d(TAG, "cellWidth = " + cellWidth);
+		borderSize = cellWidth / BORDER_FRACTION;
 		
 		SPACE_UP = (h - SurfaceNavigator.SCREEN_HEIGHT) /2;
 		SPACE_BOTTOM = SPACE_UP;
@@ -101,6 +107,8 @@ public class MySurface extends View {
 		SPACE_RIGHT = SPACE_LEFT;
 		if (D) Log.d(TAG, "SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT);
 		if (D) Log.d(TAG, "SPACE_UP = " + SPACE_UP + ", SPACE_BOTTOM = " + SPACE_BOTTOM);
+		initTransX = SPACE_LEFT;
+		initTransY = SPACE_UP;
 		
 		myMarks = new ArrayList<MyPoint>();
 		
@@ -121,13 +129,11 @@ public class MySurface extends View {
 		// Define colors for the grid lines
 		dark = new Paint();
 		dark.setColor(getResources().getColor(R.color.grid_dark));
-		dark.setStrokeWidth(9);dark.setStyle(Style.FILL_AND_STROKE);
+		dark.setStrokeWidth(8);
 		
 		hilite = new Paint();
 		hilite.setColor(getResources().getColor(R.color.grid_hilite));
-		
-		light = new Paint();
-		light.setColor(getResources().getColor(R.color.grid_light));
+		if (cellWidth > BIG_CELL_SIZE) hilite.setStrokeWidth(2);
 		
 		// Define color for the selected cell
 		selected = new Paint();
@@ -141,9 +147,14 @@ public class MySurface extends View {
 		this.myMarks = new ArrayList<MyPoint>(Arrays.asList(myMarks));
 	}
 
-
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
+		matrix.getValues(values);
+		
+		transX = Math.abs(values[2]);
+		transY = Math.abs(values[5]);
+		Log.d(TAG, "transX = " + transX + ", transY = " + transY);
+		
 		switch (event.getAction() & MotionEvent.ACTION_MASK) {
 			case MotionEvent.ACTION_DOWN: //finger down
 			   	start.set(event.getX(), event.getY());
@@ -160,7 +171,7 @@ public class MySurface extends View {
 					dy = - event.getY() + oldY; 
 					checkBoundaries();
 							
-					//if dragging done on a distance more than a cell size, then definitely a drag operation
+					//if dragging done on a distance bigger than cell size, then definitely a drag operation
 					if (dist(start, event) >= cellHeight) onDrag = true;
 							
 					this.scrollBy((int)dx, (int)dy);
@@ -172,20 +183,18 @@ public class MySurface extends View {
 				break;		
 			case MotionEvent.ACTION_POINTER_UP: //finger lifted
 			case MotionEvent.ACTION_UP: //finger lifted
-				end.set(event.getX(), event.getY());
-				deltaXs += deltaX;
-				deltaYs += deltaY;
+				float xs = transX + (event.getX() - initTransX);
+				float ys = transY + (event.getY() - initTransY);
+				end.set(xs, ys);
 				if (!onDrag) { //simple click on a cell
-					int xIndex = (int) ((end.x + deltaXs) / cellWidth); 
-					int yIndex = (int) ((end.y + deltaYs) / cellHeight);
+					int xIndex = (int) ((end.x) / cellWidth); 
+					int yIndex = (int) ((end.y) / cellHeight);
 					if (D) Log.d(TAG, "User clicked on a cell: (" + xIndex + ", " + yIndex + ")");
 					if (notOnMargin(xIndex, yIndex)) { // let the margin cells as a border
 						select(new MyPoint(xIndex, yIndex)); 
 					}
 				}
 				_mode = NONE;
-				deltaX = 0;
-				deltaY = 0;
 				break;
 		}
 		return true;
@@ -201,11 +210,18 @@ public class MySurface extends View {
 		return true;
 	}
 
+	
 	private void checkBoundaries() {
 		float checkSpaceLeft;
 	    float checkSpaceRight;
 	    float checkSpaceUp;
 	    float checkSpaceBottom;
+	    
+		SPACE_LEFT = -values[2]; //positive value of MTRANS_X
+		SPACE_RIGHT = w - SurfaceNavigator.SCREEN_WIDTH - SPACE_LEFT;
+		SPACE_UP = -values[5];  //positive value of MTRANS_Y
+		SPACE_BOTTOM = h - SurfaceNavigator.SCREEN_HEIGHT - SPACE_UP;
+		
 		if (dx < 0) { //going to right
 			//check left space
 			checkSpaceLeft = SPACE_LEFT - Math.abs(dx);
@@ -217,8 +233,7 @@ public class MySurface extends View {
 				SPACE_LEFT = 0;
 				SPACE_RIGHT = w - SurfaceNavigator.SCREEN_WIDTH;
 			}
-			deltaX += dx;
-			Log.d(TAG, "SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT + ", deltaX = " + deltaX);
+			if (D) Log.d(TAG, "SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT);
 		} else if (dx > 0) {
 			//check right space
 			checkSpaceRight = SPACE_RIGHT - Math.abs(dx);
@@ -230,7 +245,7 @@ public class MySurface extends View {
 				SPACE_RIGHT = 0;
 				SPACE_LEFT = w - SurfaceNavigator.SCREEN_WIDTH;
 			}
-			deltaX += dx;
+			if (D) Log.d(TAG, "SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT);
 		}
 		
 
@@ -245,8 +260,7 @@ public class MySurface extends View {
 				SPACE_UP = 0;
 				SPACE_BOTTOM = w - SurfaceNavigator.SCREEN_HEIGHT;
 			}
-			deltaY += dy;
-			Log.d(TAG, "SPACE_UP = " + SPACE_UP + ", SPACE_BOTTOM = " + SPACE_BOTTOM + ", deltaY = " + deltaY);
+			if (D) Log.d(TAG, "SPACE_UP = " + SPACE_UP + ", SPACE_BOTTOM = " + SPACE_BOTTOM);
 		} else if (dy > 0) {
 			//check bottom space
 			checkSpaceBottom = SPACE_BOTTOM - Math.abs(dy);
@@ -258,13 +272,16 @@ public class MySurface extends View {
 				SPACE_BOTTOM = 0;
 				SPACE_UP = w - SurfaceNavigator.SCREEN_HEIGHT;
 			}
-			deltaY += dy;
+			if (D) Log.d(TAG, "SPACE_UP = " + SPACE_UP + ", SPACE_BOTTOM = " + SPACE_BOTTOM);
 		}
 		
-	}	
+	}
+	
 
 	@Override
 	protected void onDraw(Canvas canvas) {
+		canvas.getMatrix(matrix);
+		
 		drawSurface(canvas);
 		
 		//draw existing markers
@@ -304,7 +321,7 @@ public class MySurface extends View {
 	}
 	
 	private void getRect(int x, int y, Rect rect) {
-		rect.set((int)(x*cellWidth), (int)(y*cellHeight), (int)(x*cellWidth + cellWidth), (int)(y*cellHeight + cellHeight));
+		rect.set((int)(x * cellWidth), (int)(y * cellHeight), (int)(x * cellWidth + cellWidth), (int)(y * cellHeight + cellHeight));
 	}
 	
 	private void drawSurface(Canvas canvas) {
@@ -315,28 +332,27 @@ public class MySurface extends View {
 		
 		//draw horizontal lines
 		for (int i = 1; i <= linesCount - 1 ; i++) {
-			canvas.drawLine(cellWidth, i*cellHeight, w - cellWidth, i*cellHeight, light);
-			canvas.drawLine(cellWidth, i*cellHeight + 1, w - cellWidth, i*cellHeight + 1, hilite);
-			if (cellWidth > BIG_CELL_SIZE) canvas.drawLine(cellWidth, i*cellHeight + 2, w - cellWidth, i*cellHeight + 2, hilite);
+			canvas.drawLine(cellWidth, i*cellHeight, w - cellWidth, i*cellHeight, hilite);
 		}
 		//draw vertical lines
 		for (int j = 1; j <= colsCount - 1; j++) {
-			canvas.drawLine(j*cellWidth, cellHeight, j*cellWidth , h - cellHeight, light);
-			canvas.drawLine(j*cellWidth + 1, cellHeight, j*cellWidth + 1 , h - cellHeight, hilite);
-			if (cellWidth > BIG_CELL_SIZE) canvas.drawLine(j*cellWidth + 2, cellHeight, j*cellWidth + 2 , h - cellHeight, hilite);
+			canvas.drawLine(j*cellWidth, cellHeight, j*cellWidth , h - cellHeight, hilite);
 		}
 		
 		//put some colored margins
-		canvas.drawLine(cellWidth, cellHeight, w - cellWidth, cellHeight, dark);
-		canvas.drawLine(cellWidth - 2, cellHeight - 2, w - cellWidth + 2, cellHeight - 2, dark);
-		canvas.drawLine(cellWidth, (linesCount - 1) * cellHeight, w - cellWidth, (linesCount - 1) * cellHeight, dark);
-		canvas.drawLine(cellWidth + 2, (linesCount - 1) * cellHeight + 2, w - cellWidth + 2, (linesCount - 1) * cellHeight + 2, dark);
-		
-		canvas.drawLine(cellWidth, cellHeight, cellWidth , h - cellHeight, dark);
-		canvas.drawLine(cellWidth - 2, cellHeight - 2, cellWidth - 2 , h - cellHeight + 2, dark);
-		canvas.drawLine((colsCount - 1) * cellWidth, cellHeight, (colsCount - 1) * cellWidth , h - cellHeight, dark);
-		canvas.drawLine((colsCount - 1) * cellWidth + 2, cellHeight - 2, (colsCount - 1) * cellWidth + 2 , h - cellHeight + 2, dark);
-		
+		Rect outerRect = new Rect(cellWidth - borderSize, cellHeight - borderSize, w - cellWidth + borderSize, h - cellHeight + borderSize);
+		Rect innerRect = new Rect(cellWidth + (int)hilite.getStrokeWidth(),
+									cellHeight + (int)hilite.getStrokeWidth(),
+									w - cellWidth - (int)hilite.getStrokeWidth(),
+									h - cellHeight - (int)hilite.getStrokeWidth());
+		Region rgn = new Region();
+		rgn.set(outerRect);
+		rgn.op(innerRect, Region.Op.DIFFERENCE);
+		RegionIterator iter = new RegionIterator(rgn);
+		Rect r = new Rect();
+		while (iter.next(r)) {
+             canvas.drawRect(r, dark);
+        }
 	}
 
 	public ArrayList<MyPoint> getMyMarks() {

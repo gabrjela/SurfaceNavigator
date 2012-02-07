@@ -4,6 +4,7 @@ package my.pack;
 import my.pack.utils.MyPoint;
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
 import android.view.Window;
@@ -26,10 +27,12 @@ public class SurfaceNavigator extends Activity {
 	/* Cell size is related to screen size, being calculated as
 	 * fraction of it. 
 	 */
-	private static final int CELL_FRACTION = 10;
+	private static final int CELL_FRACTION = 9;
 	public static final int CELL_COUNT = 32; // 30x30 cells, the rest of 2 will be used for margins drawing
 	
 	private MySurface mySurface;
+	
+	private int currentApiVersion;
 	
     /** Called when the activity is first created. */
     @Override
@@ -42,9 +45,32 @@ public class SurfaceNavigator extends Activity {
       	Display display = getWindowManager().getDefaultDisplay(); 
       	SCREEN_WIDTH = display.getWidth();
       	SCREEN_HEIGHT = display.getHeight();
-      	SCREEN_HEIGHT -= NAVIGATION_BAR_HEIGHT;
-      	if (D) Log.d(TAG, "SCREEN_WIDTH = " + SCREEN_WIDTH + ", SCREEN_HEIGHT = " + SCREEN_HEIGHT);
-
+      	currentApiVersion = android.os.Build.VERSION.SDK_INT;
+        if (currentApiVersion >= android.os.Build.VERSION_CODES.HONEYCOMB) {
+        	SCREEN_HEIGHT -= NAVIGATION_BAR_HEIGHT;
+        } else {
+	        DisplayMetrics displayMetrics = new DisplayMetrics();
+	        display.getMetrics(displayMetrics);
+	        int statusBarHeight;
+	        switch (displayMetrics.densityDpi) {
+	            case DisplayMetrics.DENSITY_HIGH:
+	                statusBarHeight = 38;
+	                break;
+	            case DisplayMetrics.DENSITY_MEDIUM:
+	                statusBarHeight = 25;
+	                break;
+	            case DisplayMetrics.DENSITY_LOW:
+	                statusBarHeight = 19;
+	                break;
+	            default:
+	                statusBarHeight = 25;
+	        }
+	        if (D) Log.d(TAG, "statusBarHeight = " + statusBarHeight);
+	        SCREEN_HEIGHT -= statusBarHeight;
+        }
+        
+        if (D) Log.d(TAG, "SCREEN_WIDTH = " + SCREEN_WIDTH + ", SCREEN_HEIGHT = " + SCREEN_HEIGHT);
+        
       	calculateMySurfaceSize(SCREEN_WIDTH, SCREEN_HEIGHT);
       	Log.i(TAG, "My surface size : width = " + w + ", height = " + h);
       	// Create my surface
