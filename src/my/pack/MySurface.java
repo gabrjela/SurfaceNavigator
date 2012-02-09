@@ -21,8 +21,6 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.view.animation.TranslateAnimation;
-import android.widget.LinearLayout;
 
 public class MySurface extends View {
 	// Debugging
@@ -33,7 +31,6 @@ public class MySurface extends View {
 	private Paint background = null;
 	private Paint dark = null;
 	private Paint hilite = null;
-	private Paint light = null;
 	private Paint foreground = null;
 	private FontMetrics fm = null;
 	private Paint selected = null;
@@ -41,7 +38,7 @@ public class MySurface extends View {
 	private int _mode = NONE;
 	private static final int NONE = 0;
 	private static final int DRAG = 1;
-	private static final int ZOOM = 2; // not used yet
+	private static final int ZOOM = 2;
 	
 	// Size of this object, retrieved from SurfaceNavigator
 	private int w;
@@ -101,7 +98,6 @@ public class MySurface extends View {
     public static float BIG_CELL_SIZE = 48;
     public static final int BORDER_FRACTION = 10;
     
-    private boolean extended = false;
     
 	public MySurface(Context context, int width, int height) { // w = 900, h = 900
 		super(context);
@@ -121,11 +117,7 @@ public class MySurface extends View {
 			SPACE_LEFT = 0;
 			initTransX = 0;
 			startX = (SurfaceNavigator.SCREEN_WIDTH - w) / 2;
-<<<<<<< HEAD
 			indexStartX = startX / cellWidth + 1;
-=======
-			indexStartX = startX / SurfaceNavigator.CELL_COUNT;
->>>>>>> Pinch-to-Zoom added
 		} else {
 			SPACE_LEFT = (w - SurfaceNavigator.SCREEN_WIDTH) /2;
 			initTransX = SPACE_LEFT;
@@ -136,21 +128,12 @@ public class MySurface extends View {
 			SPACE_UP = 0;
 			initTransY = 0;
 			startY = (SurfaceNavigator.SCREEN_HEIGHT - h) / 2;
-<<<<<<< HEAD
 			indexStartY = startY / cellHeight + 1;
-=======
-			indexStartX = startY / SurfaceNavigator.CELL_COUNT;
->>>>>>> Pinch-to-Zoom added
 		} else {
 			SPACE_UP = (h - SurfaceNavigator.SCREEN_HEIGHT) /2;
 			initTransY = SPACE_UP;
 		}
 		SPACE_BOTTOM = SPACE_UP;
-		
-		if (D) Log.d(TAG, "SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT);
-		if (D) Log.d(TAG, "SPACE_UP = " + SPACE_UP + ", SPACE_BOTTOM = " + SPACE_BOTTOM);
-		if (D) Log.d(TAG, "initTransX = " + initTransX + ", initTransY = " + initTransY);
-			
 		
 		myMarks = new ArrayList<MyPoint>();
 		
@@ -177,9 +160,6 @@ public class MySurface extends View {
 		hilite.setColor(getResources().getColor(R.color.grid_hilite));
 		if (cellWidth > BIG_CELL_SIZE) hilite.setStrokeWidth(2);
 		
-		light = new Paint();
-		light.setColor(getResources().getColor(R.color.grid_light));
-		
 		// Define color for the selected cell
 		selected = new Paint();
 		selected.setColor(getResources().getColor(R.color.grid_selected));
@@ -200,16 +180,13 @@ public class MySurface extends View {
 				} else { // canvas larger than screen on both directions
 					// Calculate MIN_ZOOM so that minimum scaled canvas will fit to screen size
 					MIN_ZOOM = ((float)Math.max(SurfaceNavigator.SCREEN_WIDTH, SurfaceNavigator.SCREEN_HEIGHT)) / ((float)Math.max(w, h));
-					if (D) Log.d(TAG, "big canvas with MIN_ZOOM = " + MIN_ZOOM);
+					if (D) Log.d(TAG, "Canvas bigger than screen on both directions with MIN_ZOOM = " + MIN_ZOOM);
 				}
 			}
 		}
 		// Set zoom pivot point in the middle of the screen
 		mid.set(startX + w / 2, startY + h / 2);
-<<<<<<< HEAD
-		if (D) Log.d(TAG, "mid points:" + mid.x + ", " + mid.y);
-=======
->>>>>>> Pinch-to-Zoom added
+		if (D) Log.d(TAG, "Zoom pivot coords: " + mid.x + ", " + mid.y);
 		
 	}
 	
@@ -224,19 +201,14 @@ public class MySurface extends View {
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
-		if (D) Log.d(TAG, "onTouchEvent " + event.getX() + ", " + event.getY());
-		
 		float[] values = new float[9];
 		matrix.getValues(values);
-		Log.d(TAG, "Values: " + values[0] + " " + values[1] + " " + values[2] + " " + values[3] + " " + values[4] + " " + values[5] +  " " +values[6] + " " + values[7] + " " + values[8]);
 		
 		transX = Math.abs(values[2]);
 		transY = Math.abs(values[5]);
-		Log.d(TAG, "transX = " + transX + ", transY = " + transY);
 		
 		switch (event.getAction() & MotionEvent.ACTION_MASK) {
 			case MotionEvent.ACTION_DOWN: //first finger down only
-				Log.d(TAG, "ACTION_DOWN");
 			   	start.set(event.getX(), event.getY());
 			   	//reset onMove
 			   	onDrag = false;
@@ -248,57 +220,33 @@ public class MySurface extends View {
 			   	zoomDetector.onTouchEvent(event);
 				break;
 			case MotionEvent.ACTION_MOVE: //finger dragging
-				Log.d(TAG, "ACTION_MOVE in mode " + _mode);
 				if (_mode == DRAG) {
 					//if dragging done on a distance bigger than cell size, then definitely a drag operation
 					if (dist(start, event) >= cellHeight) onDrag = true;
-					
-//					if (!isWholeSurfaceDisplayed()) {
-//						if (!isWholeXSurfaceDisplayed())
-							dx = -event.getX() + oldX; //we can move along X axis
-//						else dx = 0;
-<<<<<<< HEAD
+					dx = -event.getX() + oldX; //we can move along X axis
+					dy = -event.getY() + oldY; //we can move along Y axis
 						
-//						if (!isWholeYSurfaceDisplayed()) 
-							dy = -event.getY() + oldY; //we can move along Y axis
-//						else dy = 0;
-						
-						checkBoundaries();
+					checkBoundaries();
 								
-						this.scrollBy((int)dx, (int)dy);
-=======
-						
-//						if (!isWholeYSurfaceDisplayed()) 
-							dy = -event.getY() + oldY; //we can move along Y axis
-//						else dy = 0;
-						
-						checkBoundaries();
+					this.scrollBy((int)dx, (int)dy);
 								
-//						this.scrollBy((int)dx, (int)dy);
->>>>>>> Pinch-to-Zoom added
-								
-						oldX = event.getX();
-					   	oldY = event.getY();
-//					} // otherwise don't move the surface
+					oldX = event.getX();
+					oldY = event.getY();
 				} else
 					if (_mode == ZOOM) {
-						Log.d(TAG, "_mode == ZOOM");
 						zoomDetector.onTouchEvent(event);
 					}
 				break;
 			case MotionEvent.ACTION_POINTER_DOWN: //second finger down
-				Log.d(TAG, "ACTION_POINTER_DOWN");
 			    _mode = ZOOM;
 			    zoomDetector.onTouchEvent(event);
 			    break;
 			case MotionEvent.ACTION_POINTER_UP: //first finger lifted
-				Log.d(TAG, "ACTION_POINTER_UP");
 				if (_mode == ZOOM) {
 					zoomDetector.onTouchEvent(event);
 				}
 				break;
 			case MotionEvent.ACTION_UP: //second finger lifted
-				Log.d(TAG, "ACTION_UP");
 				if (_mode == DRAG ) {
 					float xs;
 					float ys;
@@ -325,13 +273,9 @@ public class MySurface extends View {
 					_mode = NONE;
 				} else
 					if (_mode == ZOOM) {
-						if (D) Log.d(TAG, "zoomDetector.onTouchEvent ended");
 						zoomDetector.onTouchEvent(event);
 						_mode = NONE;
 					}
-				break;
-			default:
-				Log.d(TAG, "Action " + (event.getAction() & MotionEvent.ACTION_MASK));
 				break;
 		}
 		
@@ -347,14 +291,11 @@ public class MySurface extends View {
 	}
 
 	private void checkBoundaries() {
-		Log.d(TAG, (w * scaleFactor) + " wscaleFactor and hscaleFactor " + (h * scaleFactor));
 		if ((w - 2 * cellWidth) * scaleFactor < SurfaceNavigator.SCREEN_WIDTH) {
 			dx = 0;
-//			if (D) Log.d(TAG, "w smaller " + (w * scaleFactor));
 		}
 		if ((h - 2 * cellHeight) * scaleFactor < SurfaceNavigator.SCREEN_HEIGHT) {
 			dy = 0;
-//			if (D) Log.d(TAG, "h smaller " + (h * scaleFactor));
 		}
 		if (dx == 0 && dy == 0) return;
 		
@@ -365,10 +306,8 @@ public class MySurface extends View {
 	    
 	    float[] values = new float[9];
 		matrix.getValues(values);
-<<<<<<< HEAD
 		
 		if (isWholeXSurfaceDisplayed()) {
-			if (D) Log.d(TAG, "indexStartX = " + indexStartX + ", cellWidth = " + cellWidth  + ", scaleFactor = " + scaleFactor);
 			SPACE_LEFT = -values[2] - startX * scaleFactor; //indexStartX * cellWidth * scaleFactor;
 			SPACE_RIGHT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_LEFT;
 		} else {
@@ -385,37 +324,16 @@ public class MySurface extends View {
 		}
 		
 		
-		if (D) Log.d(TAG, "calculate SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT);
-		if (D) Log.d(TAG, "calculate SPACE_UP = " + SPACE_UP + ", SPACE_BOTTOM = " + SPACE_BOTTOM);
-=======
-//		if (isWholeXSurfaceDisplayed()) {
-//			SPACE_LEFT = -values[2] //w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH;
-//			SPACE_RIGHT = 
-//		}
-		SPACE_LEFT = -values[2];
-		SPACE_RIGHT = w*scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_LEFT;
-		SPACE_UP = -values[5];
-		SPACE_BOTTOM = h*scaleFactor - SurfaceNavigator.SCREEN_HEIGHT - SPACE_UP;
->>>>>>> Pinch-to-Zoom added
-		
 		if (dx < 0) { //going to right
 			//check left space
 			checkSpaceLeft = SPACE_LEFT - Math.abs(dx);
 			if (checkSpaceLeft >= 0) { // we can scroll by dx
 				SPACE_LEFT = checkSpaceLeft;
-<<<<<<< HEAD
 				SPACE_RIGHT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_LEFT;
 			} else {
 				dx = - SPACE_LEFT;
 				SPACE_LEFT = 0;
 				SPACE_RIGHT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH;
-=======
-				SPACE_RIGHT = w*scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_LEFT;
-			} else {
-				dx = - SPACE_LEFT;
-				SPACE_LEFT = 0;
-				SPACE_RIGHT = w*scaleFactor - SurfaceNavigator.SCREEN_WIDTH;
->>>>>>> Pinch-to-Zoom added
 			}
 			if (D) Log.d(TAG, "SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT);
 		} else if (dx > 0) {
@@ -423,19 +341,11 @@ public class MySurface extends View {
 			checkSpaceRight = SPACE_RIGHT - Math.abs(dx);
 			if (checkSpaceRight >= 0) { // we can scroll by dx
 				SPACE_RIGHT = checkSpaceRight;
-<<<<<<< HEAD
 				SPACE_LEFT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_RIGHT;
 			} else {
 				dx = SPACE_RIGHT;
 				SPACE_RIGHT = 0;
 				SPACE_LEFT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH;
-=======
-				SPACE_LEFT = w*scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_RIGHT;
-			} else {
-				dx = SPACE_RIGHT;
-				SPACE_RIGHT = 0;
-				SPACE_LEFT = w*scaleFactor - SurfaceNavigator.SCREEN_WIDTH;
->>>>>>> Pinch-to-Zoom added
 			}
 			if (D) Log.d(TAG, "SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT);
 		}
@@ -471,14 +381,10 @@ public class MySurface extends View {
 
 	@Override
 	protected void onDraw(Canvas canvas) {
-		if (D) Log.d(TAG, "canvas : " + canvas.getWidth() + ", " + canvas.getHeight() + ", this.getWidth() = " + this.getWidth() + ", this.getHeight() = " + this.getHeight());
-		
 		canvas.getMatrix(matrix);
 		matrix.preScale(scaleFactor, scaleFactor, mid.x, mid.y);
 		canvas.setMatrix(matrix);
 			
-		if (D) Log.d(TAG, "scaleFactor = " + scaleFactor);
-		
 		drawSurface(canvas);
 		
 		//draw existing markers
@@ -582,19 +488,9 @@ public class MySurface extends View {
 		return false;
 	}
 	
-	public boolean isExtended() {
-		return extended;
-	}
-
-	public void setExtended(boolean extended) {
-		this.extended = extended;
-		Log.d(TAG, "setExtended");
-	}
-
 	private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
 		@Override
 		public boolean onScale(ScaleGestureDetector detector) {
-			Log.d(TAG, "onScale " + zoomDetector.getCurrentSpan() + ", " + zoomDetector.getPreviousSpan());
 			scaleFactor *= detector.getScaleFactor();
 			scaleFactor = Math.max(MIN_ZOOM, Math.min(scaleFactor, MAX_ZOOM));
 			if (scaleFactor != 1) invalidate();
@@ -605,15 +501,7 @@ public class MySurface extends View {
 		@Override
 		public boolean onScaleBegin(ScaleGestureDetector detector) {
 			super.onScaleBegin(detector);
-<<<<<<< HEAD
-//			if (!isWholeXSurfaceDisplayed() && !isWholeYSurfaceDisplayed()) {
-				MySurface.this.scrollTo(0, 0);
-//			}
-=======
-			if (!isWholeXSurfaceDisplayed() && !isWholeYSurfaceDisplayed()) {
-				MySurface.this.scrollTo(0, 0);
-			}
->>>>>>> Pinch-to-Zoom added
+			MySurface.this.scrollTo(0, 0);
 			
 			return true;
 		}

@@ -3,8 +3,6 @@ package my.pack;
 
 import my.pack.utils.MyPoint;
 import android.app.Activity;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -24,20 +22,14 @@ public class SurfaceNavigator extends Activity {
 	public static int SCREEN_HEIGHT;
 	public static int NAVIGATION_BAR_HEIGHT = 48;
 	// Size of my surface, calculated depending on the screen size
-	static int w;
-	static int h;
-	int extendedW;
-	int extendedH;
+	int w;
+	int h;
 	
 	/* Cell size is related to screen size, being calculated as
 	 * fraction of it. 
 	 */
 	private static final int CELL_FRACTION = 10;
-<<<<<<< HEAD
-	public static final int CELL_COUNT = 5; // 30x30 cells, the rest of 2 will be used for margins drawing
-=======
 	public static final int CELL_COUNT = 32; // 30x30 cells, the rest of 2 will be used for margins drawing
->>>>>>> Pinch-to-Zoom added
 	
 	private MySurface mySurface;
 	
@@ -75,17 +67,12 @@ public class SurfaceNavigator extends Activity {
 	            default:
 	                statusBarHeight = 25;
 	        }
-	        if (D) Log.d(TAG, "statusBarHeight = " + statusBarHeight + " getWindow().getDecorView().isShown() " + getWindow().getDecorView().isShown() );
+	        if (D) Log.d(TAG, "statusBarHeight = " + statusBarHeight);
 	        SCREEN_HEIGHT -= statusBarHeight;
         }
       	if (D) Log.d(TAG, "SCREEN_WIDTH = " + SCREEN_WIDTH + ", SCREEN_HEIGHT = " + SCREEN_HEIGHT);
 
       	calculateMySurfaceSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-        //workaround
-//      	if (w < SurfaceNavigator.SCREEN_WIDTH) {
-//      		extendedW = SurfaceNavigator.SCREEN_WIDTH;
-//      		extendedH = extendedW;
-//      	}
       	Log.i(TAG, "My surface size : width = " + w + ", height = " + h);
       	// Create my surface
 		if (savedInstanceState != null) {
@@ -96,22 +83,6 @@ public class SurfaceNavigator extends Activity {
 		} else {
 			mySurface = new MySurface(this, w, h);
 		}
-		
-
-//		LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(w, h);
-//		int dim = 0;
-//		if (!mySurface.isWholeSurfaceDisplayed()) {
-//			if (mySurface.isWholeXSurfaceDisplayed() || mySurface.isWholeYSurfaceDisplayed()) {
-//				if (mySurface.isWholeXSurfaceDisplayed()) {
-//					dim = SCREEN_WIDTH;
-//				} else {
-//					if (mySurface.isWholeYSurfaceDisplayed()) {
-//						dim = SCREEN_HEIGHT;
-//					}
-//				}
-//				p = new LinearLayout.LayoutParams(dim, dim);
-//			}
-//		}
 		
 		LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
 										Math.max(w, SCREEN_WIDTH), // Math.max(SCREEN_WIDTH, SCREEN_WIDTH)), 
