@@ -33,7 +33,6 @@ public class MySurface extends View {
 	private Paint background = null;
 	private Paint dark = null;
 	private Paint hilite = null;
-	private Paint light = null;
 	private Paint foreground = null;
 	private FontMetrics fm = null;
 	private Paint selected = null;
@@ -121,7 +120,7 @@ public class MySurface extends View {
 			SPACE_LEFT = 0;
 			initTransX = 0;
 			startX = (SurfaceNavigator.SCREEN_WIDTH - w) / 2;
-			indexStartX = startX / SurfaceNavigator.CELL_COUNT;
+			indexStartX = startX / cellWidth + 1;
 		} else {
 			SPACE_LEFT = (w - SurfaceNavigator.SCREEN_WIDTH) /2;
 			initTransX = SPACE_LEFT;
@@ -132,7 +131,7 @@ public class MySurface extends View {
 			SPACE_UP = 0;
 			initTransY = 0;
 			startY = (SurfaceNavigator.SCREEN_HEIGHT - h) / 2;
-			indexStartX = startY / SurfaceNavigator.CELL_COUNT;
+			indexStartY = startY / cellHeight + 1;
 		} else {
 			SPACE_UP = (h - SurfaceNavigator.SCREEN_HEIGHT) /2;
 			initTransY = SPACE_UP;
@@ -169,9 +168,6 @@ public class MySurface extends View {
 		hilite.setColor(getResources().getColor(R.color.grid_hilite));
 		if (cellWidth > BIG_CELL_SIZE) hilite.setStrokeWidth(2);
 		
-		light = new Paint();
-		light.setColor(getResources().getColor(R.color.grid_light));
-		
 		// Define color for the selected cell
 		selected = new Paint();
 		selected.setColor(getResources().getColor(R.color.grid_selected));
@@ -198,6 +194,7 @@ public class MySurface extends View {
 		}
 		// Set zoom pivot point in the middle of the screen
 		mid.set(startX + w / 2, startY + h / 2);
+		if (D) Log.d(TAG, "mid points:" + mid.x + ", " + mid.y);
 		
 	}
 	
@@ -252,7 +249,7 @@ public class MySurface extends View {
 						
 						checkBoundaries();
 								
-//						this.scrollBy((int)dx, (int)dy);
+						this.scrollBy((int)dx, (int)dy);
 								
 						oldX = event.getX();
 					   	oldY = event.getY();
@@ -324,6 +321,17 @@ public class MySurface extends View {
 	}
 
 	private void checkBoundaries() {
+		Log.d(TAG, (w * scaleFactor) + " wscaleFactor and hscaleFactor " + (h * scaleFactor));
+		if ((w - 2 * cellWidth) * scaleFactor < SurfaceNavigator.SCREEN_WIDTH) {
+			dx = 0;
+//			if (D) Log.d(TAG, "w smaller " + (w * scaleFactor));
+		}
+		if ((h - 2 * cellHeight) * scaleFactor < SurfaceNavigator.SCREEN_HEIGHT) {
+			dy = 0;
+//			if (D) Log.d(TAG, "h smaller " + (h * scaleFactor));
+		}
+		if (dx == 0 && dy == 0) return;
+		
 		float checkSpaceLeft;
 	    float checkSpaceRight;
 	    float checkSpaceUp;
@@ -331,25 +339,38 @@ public class MySurface extends View {
 	    
 	    float[] values = new float[9];
 		matrix.getValues(values);
-//		if (isWholeXSurfaceDisplayed()) {
-//			SPACE_LEFT = -values[2] //w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH;
-//			SPACE_RIGHT = 
-//		}
-		SPACE_LEFT = -values[2];
-		SPACE_RIGHT = w*scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_LEFT;
-		SPACE_UP = -values[5];
-		SPACE_BOTTOM = h*scaleFactor - SurfaceNavigator.SCREEN_HEIGHT - SPACE_UP;
+		
+		if (isWholeXSurfaceDisplayed()) {
+			if (D) Log.d(TAG, "indexStartX = " + indexStartX + ", cellWidth = " + cellWidth  + ", scaleFactor = " + scaleFactor);
+			SPACE_LEFT = -values[2] - startX * scaleFactor; //indexStartX * cellWidth * scaleFactor;
+			SPACE_RIGHT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_LEFT;
+		} else {
+			SPACE_LEFT = -values[2] - startX * scaleFactor;
+			SPACE_RIGHT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_LEFT;
+		}
+		
+		if (isWholeYSurfaceDisplayed()) {
+			SPACE_UP = -values[5] - startY * scaleFactor;
+			SPACE_BOTTOM = h * scaleFactor - SurfaceNavigator.SCREEN_HEIGHT - SPACE_UP;
+		} else {
+			SPACE_UP = -values[5] - startY * scaleFactor;
+			SPACE_BOTTOM = h * scaleFactor - SurfaceNavigator.SCREEN_HEIGHT - SPACE_UP;
+		}
+		
+		
+		if (D) Log.d(TAG, "calculate SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT);
+		if (D) Log.d(TAG, "calculate SPACE_UP = " + SPACE_UP + ", SPACE_BOTTOM = " + SPACE_BOTTOM);
 		
 		if (dx < 0) { //going to right
 			//check left space
 			checkSpaceLeft = SPACE_LEFT - Math.abs(dx);
 			if (checkSpaceLeft >= 0) { // we can scroll by dx
 				SPACE_LEFT = checkSpaceLeft;
-				SPACE_RIGHT = w*scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_LEFT;
+				SPACE_RIGHT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_LEFT;
 			} else {
 				dx = - SPACE_LEFT;
 				SPACE_LEFT = 0;
-				SPACE_RIGHT = w*scaleFactor - SurfaceNavigator.SCREEN_WIDTH;
+				SPACE_RIGHT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH;
 			}
 			if (D) Log.d(TAG, "SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT);
 		} else if (dx > 0) {
@@ -357,11 +378,11 @@ public class MySurface extends View {
 			checkSpaceRight = SPACE_RIGHT - Math.abs(dx);
 			if (checkSpaceRight >= 0) { // we can scroll by dx
 				SPACE_RIGHT = checkSpaceRight;
-				SPACE_LEFT = w*scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_RIGHT;
+				SPACE_LEFT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH - SPACE_RIGHT;
 			} else {
 				dx = SPACE_RIGHT;
 				SPACE_RIGHT = 0;
-				SPACE_LEFT = w*scaleFactor - SurfaceNavigator.SCREEN_WIDTH;
+				SPACE_LEFT = w * scaleFactor - SurfaceNavigator.SCREEN_WIDTH;
 			}
 			if (D) Log.d(TAG, "SPACE_LEFT = " + SPACE_LEFT + ", SPACE_RIGHT = " + SPACE_RIGHT);
 		}
@@ -531,9 +552,9 @@ public class MySurface extends View {
 		@Override
 		public boolean onScaleBegin(ScaleGestureDetector detector) {
 			super.onScaleBegin(detector);
-			if (!isWholeXSurfaceDisplayed() && !isWholeYSurfaceDisplayed()) {
+//			if (!isWholeXSurfaceDisplayed() && !isWholeYSurfaceDisplayed()) {
 				MySurface.this.scrollTo(0, 0);
-			}
+//			}
 			
 			return true;
 		}

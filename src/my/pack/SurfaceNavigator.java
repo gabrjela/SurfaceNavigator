@@ -3,8 +3,6 @@ package my.pack;
 
 import my.pack.utils.MyPoint;
 import android.app.Activity;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -33,7 +31,7 @@ public class SurfaceNavigator extends Activity {
 	 * fraction of it. 
 	 */
 	private static final int CELL_FRACTION = 10;
-	public static final int CELL_COUNT = 32; // 30x30 cells, the rest of 2 will be used for margins drawing
+	public static final int CELL_COUNT = 5; // 30x30 cells, the rest of 2 will be used for margins drawing
 	
 	private MySurface mySurface;
 	
